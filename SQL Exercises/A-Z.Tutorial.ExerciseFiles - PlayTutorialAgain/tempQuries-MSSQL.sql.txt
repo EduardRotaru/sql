@@ -1,0 +1,272 @@
+Chapter one - importing
+
+-- RightClick database - Tasks - Import data - Data source (Flat file source for .csv)
+					- test qualifier is important on .csv files
+					- in adanvce we can customize individual rows, like length data type
+				- Destination MS OLE DB Provider for SQL Server
+
+Tip: Drag and drop tables don't type them.
+USE [consumer_complaint]
+GO
+
+DROP TABLE Consumer_Complaints;
+CREATE TABLE Consumer_Complaints (
+    date_received varchar(5000),
+    product_name varchar(5000),
+    sub_product varchar(5000),
+    issue varchar(5000),
+    sub_issue varchar(5000),
+    consumer_complaint_narrative varchar(5000),
+    company_public_response varchar(5000),
+    company varchar(5000),
+    state_name varchar(5000),
+    zip_code varchar(5000),
+    tags varchar(5000),
+    consumer_consent_provided varchar(5000),
+    submitted_via varchar(5000),
+    date_sent varchar(5000),
+    company_response_to_consumer varchar(5000),
+    timely_response varchar(5000),
+    consumer_disputed varchar(5000),
+    complaint_id varchar(5000)
+)
+
+INSERT INTO [dbo].[Consumer_Complaints]
+SELECT *
+FROM [dbo].[RawP9-ConsumerComplaints]
+
+SELECT *
+FROM Consumer_Complaints
+
+Chapter 2 - Logical conditions
+
+SELECT product_name, issue
+FROM consumer_complaints
+
+SELECT company, zip_code, state_name
+FROM consumer_complaints
+
+SELECT *
+FROM Consumer_Complaints
+WHERE state_name = 'NY'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE state_name = 'NY' OR state_name = 'CA'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE state_name IN('NY', 'CA')
+
+SELECT *
+FROM consumer_complaints
+WHERE tags = 'Servicemember' AND timely_response = 'Yes'
+
+-- Chapter 3 - Wildcards 
+
+SELECT *
+FROM Consumer_Complaints
+WHERE product_name LIKE '%Credit%'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE product_name LIKE 'Credit%'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE product_name LIKE '%Credit'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE product_name LIKE 'Credit_____'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE product_name LIKE 'Credit__________'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE zip_code LIKE '75__2'
+
+SELECT zip_code
+FROM consumer_complaints
+WHERE zip_code LIKE '4_4_'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE issue LIKE '%Late%'
+
+SELECT QUERY THEORY
+Queries that are written to retrieve information from a database must contain 
+SELECT and FROM clauses, these are mandatory elements.
+- The SELECT clause specifies what columns(attributes) should be in the result table
+- The FROM clause specifies the tables to be used to determine the results.
+When using SELECT statement we can specifiy what elements we want selected separated by a comma, * for all attributes
+
+-- Chapter 4 - Working with arithmetic data
+
+UPDATE console_games
+SET global_sales = na_sales + eu_sales + jp_sales + other_sales
+
+SELECT * FROM console_games
+ORDER BY global_sales 
+
+-- after the altering the columns are all 0 and I can't do division by 0
+
+UPDATE console_games
+SET na_percentage_sales = (na_sales / global_sales) * 100
+WHERE global_sales IS NOT NULL AND global_sales > 0
+
+-- Chapter 5 - Order by but case is not mentioned so this tutorials is too easy
+-- Chapter 6 - Varchar
+
+SELECT publisher, LEFT(publisher, 4), RIGHT(publisher, 4) FROM console_games
+
+SELECT genre, LOWER(REVERSE(genre)) FROM console_games
+
+-- Chapter 7 - DateTime
+SELECT *, DATEDIFF(MONTH, first_retail_availability, discontinued) AS months_existed
+FROM console_dates
+ORDER BY months_existed DESC
+
+SELECT platform_name, first_retail_availability
+FROM console_games
+WHERE [first_retail_availability] LIKE '_____11___' 
+
+SELECT platform_name, first_retail_availability
+FROM console_games
+WHERE DATEPART(MONTH, [first_retail_availability]) - 12 = 0
+
+SELECT COUNT(platform_name) FROM console_dates	
+WHERE DATE_PART('month', first_retail_availability) - 12 = 0 OR DATE_PART('month', first_retail_availability) - 11 = 0
+
+-- Chapter 8 - Conversion
+SELECT *, CAST([game_year] AS decimal)
+FROM console_games
+
+Chapter 9
+
+USE Pets
+GO 
+
+CREATE TABLE Pets (
+    Petid varchar(10),
+    [Name] varchar(100),
+    Kind varchar(100),
+    Gender varchar(10),
+    Age int,
+    OwnerID varchar(10)
+)
+
+CREATE TABLE Owners (
+    OwnerID varchar(10),
+    [Name] varchar(100),
+    Surname varchar(100),
+    StreetAddress varchar(100),
+    City varchar(100),
+    [State] varchar(2),
+	StateFull varchar(100),
+	ZipCode varchar(10)
+)
+
+CREATE TABLE ProceduresDetails (
+    ProcedureType varchar(100),
+    ProcedureSubCode varchar(10),
+    [Description] varchar(100),
+    Price float
+)
+
+CREATE TABLE ProceduresHistory (
+    PetID varchar(10),
+    ProcedureDate date,
+    ProcedureType varchar(100),
+    ProcedureSubCode varchar(10)
+)
+
+INSERT INTO [dbo].[Owners]
+SELECT *
+FROM [dbo].[RAW_Owners]
+
+INSERT INTO [dbo].[Pets]
+SELECT *
+FROM [dbo].[RAW_Pets]
+
+INSERT INTO [dbo].[ProceduresDetails]
+SELECT *
+FROM [dbo].[RAW_ProceduresDetails]
+
+INSERT INTO [dbo].[ProceduresHistory]
+SELECT *
+FROM [dbo].[RAW_ProceduresHistory]
+
+
+SELECT * 
+FROM [dbo].[Owners]
+
+SELECT *
+FROM [dbo].[Pets]
+
+-- Challenges
+
+SELECT p.Name "Pet Name", o.Name "Owner Name" 
+FROM Pets p
+LEFT JOIN Owners o ON p.OwnerID = o.OwnerID
+ORDER BY p.Name
+
+SELECT p.Name "Pet Name", o.Name "Owner Name" 
+FROM Pets p
+LEFT JOIN Owners o ON p.OwnerID = o.OwnerID
+WHERE LEFT(o.Name, 1) = LEFT(p.Name, 1)
+
+SELECT *
+FROM Pets p
+INNER JOIN ProceduresHistory ph ON p.Petid = ph.PetID
+
+SELECT *
+FROM Pets p
+FULL OUTER JOIN ProceduresHistory ph ON p.Petid = ph.PetID
+
+SELECT p.Name, pd.ProcedureType, pd.Price, ph.ProcedureDate, pd.Description
+FROM ProceduresDetails pd
+INNER JOIN ProceduresHistory ph ON pd.ProcedureType = ph.ProcedureType 
+	AND pd.ProcedureSubCode = ph.ProcedureSubCode
+INNER JOIN Pets p ON ph.PetID = p.Petid
+ORDER BY p.Name
+
+SELECT * 
+FROM Pets
+CROSS JOIN Owners
+
+-- next chapter starts here
+-- DB created with the wizard
+
+CREATE TABLE movies
+(
+	movie_name VARCHAR(200),
+	movie_year INTEGER,
+	country VARCHAR(100),
+	genre VARCHAR(1000) NOT NULL,
+	PRIMARY KEY(movie_name, movie_year)
+);
+
+INSERT INTO movies 
+VALUES('Terra 2', 1998, 'USA', 'Sci-fi'), ('Interstellar', 2008, 'USA', 'Sci-fi');
+
+INSERT INTO movies
+VALUES('The Godfather', 1997, '', 'Crime');
+
+UPDATE movies
+SET country = 'USA'
+WHERE movie_name = 'The Godfather'
+
+ALTER TABLE movies
+ADD director VARCHAR(100)
+
+UPDATE movies
+SET director = 'Christopher Columb'
+WHERE movie_name = 'Terra'
+
+SELECT * 
+FROM movies
+
+-- same as psql

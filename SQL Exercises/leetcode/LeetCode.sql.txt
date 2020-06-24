@@ -1,0 +1,13 @@
+-- 1. Nth salary of an employee
+
+CREATE FUNCTION getNthHighestSalary(@N INT) RETURNS INT AS
+BEGIN
+    RETURN (
+        /* Write your T-SQL query statement below. */
+        SELECT emp1.Salary
+        FROM Employee emp1
+        WHERE (@N - 1) = (SELECT COUNT(DISTINCT(emp2.Salary))
+                         FROM Employee emp2
+                         WHERE emp1.Salary > emp2.Salary)
+    );
+END

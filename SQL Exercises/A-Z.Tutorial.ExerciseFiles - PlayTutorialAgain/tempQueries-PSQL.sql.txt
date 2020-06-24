@@ -1,0 +1,418 @@
+Chapter one - importing
+-- No wizard present here.
+
+-- CREATE TABLE console_games (
+--     game_rank integer,
+--     game_name varchar(1200),
+--     platform varchar(1200),
+--     game_year integer,
+--     genre varchar(20),
+--     publisher varchar(1200),
+--     na_sales float8,
+--     eu_sales float8,
+--     jp_sales float8,
+--     other_sales float8    
+-- );
+
+-- COPY console_games FROM 'C:\Users\Kirill\Desktop\Databases\ConsoleGames.csv' DELIMITER ',' CSV HEADER;
+
+
+-- CREATE TABLE console_dates (
+--     platform_name char(120),
+--     first_retail_availability date,
+--     discontinued date,
+--     units_sold_mill float8,
+--     platform_comment varchar(120)    
+-- );
+
+-- COPY console_dates FROM 'C:\Users\Kirill\Desktop\Databases\ConsoleDates.csv' DELIMITER ',' CSV HEADER;
+
+SELECT *
+FROM Consumer_Complaints
+WHERE state_name = 'NY'
+
+SELECT *
+FROM consumer_complaints
+WHERE tags = 'Servicemember' AND timely_response = 'Yes'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE state_name = 'NY' OR state_name = 'CA'
+
+-- Chapter Two - Wildcards
+
+SELECT *
+FROM Consumer_Complaints
+WHERE UPPER(product_name) LIKE UPPER('%credit%')
+
+SELECT *
+FROM Consumer_Complaints
+WHERE LOWER(issue) LIKE '%late%'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE LOWER(issue) LIKE '_l%'
+
+SELECT *
+FROM Consumer_Complaints
+WHERE LOWER(issue) LIKE '%t'
+
+SELECT zip_code
+FROM consumer_complaints
+WHERE zip_code LIKE '4_4_'
+
+-- Chapter Three 
+
+DROP FUNCTION na_percentage_sales_fn();
+CREATE OR REPLACE FUNCTION na_percentage_sales_fn() 
+RETURNS TABLE (game_rank int, na_percentage_sales float8) AS $$
+BEGIN
+    RETURN QUERY 
+	SELECT console_games.game_rank, (console_games.na_sales / console_games.global_sales) * 100 FROM console_games
+	WHERE global_sales > 0
+	ORDER BY console_games.game_rank ASC;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT game_rank AS "Game Rank", na_percentage_sales FROM na_percentage_sales_fn()
+
+SELECT publisher, LEFT(publisher, 4), RIGHT(publisher, 4) FROM console_games
+
+SELECT genre, LOWER(REVERSE(genre)) FROM console_games
+
+SELECT game_name, LENGTH(game_name) AS g_length FROM console_games
+ORDER BY g_length DESC
+
+Chapter 4 - Dates
+
+SELECT *, (discontinued - first_retail_availability)/365 AS days_existed FROM console_dates
+Substragting dates results in days
+
+SELECT *, (discontinued - first_retail_availability)/365 AS days_existed FROM console_dates
+ORDER BY days_existed
+
+SELECT *, DATE_PART('year', discontinued) - DATE_PART('year', first_retail_availability) AS year_existed FROM console_dates
+ORDER BY year_existed
+
+SELECT *, AGE(discontinued, first_retail_availability) as platform_alive FROM console_dates
+
+Chapter 5 - Conversion
+
+SELECT CAST(game_year as varchar(4))
+FROM console_games
+ORDER BY game_rank
+
+SELECT game_year::varchar(4)
+FROM console_games
+ORDER BY game_rank;
+
+SELECT to_date(CAST(game_year as varchar(4)), 'yyyy')
+FROM console_games
+ORDER BY game_rank;
+
+Chapter 6 - Joins
+
+CREATE TABLE pets (
+    petid varchar,
+    name varchar,
+    kind varchar,
+    gender varchar,
+    age int,
+    ownerid varchar
+);
+
+COPY pets FROM 'F:\Downloads\P9-Pets.csv' DELIMITER ',' CSV HEADER;
+
+SELECT * FROM pets
+
+CREATE TABLE owners (
+    ownerid varchar,
+    name varchar,
+    surname varchar,
+    streetaddress varchar,
+    city varchar,
+    state varchar(2),
+    statefull varchar,
+    zipcode varchar
+);
+
+COPY owners FROM 'F:\Downloads\P9-Owners.csv' DELIMITER ',' CSV HEADER;
+
+SELECT * FROM owners
+
+CREATE TABLE proceduredetails (
+    proceduretype varchar,
+    proceduresubcode varchar,
+    description varchar,
+    price float
+);
+
+COPY proceduredetails FROM 'F:\Downloads\P9-ProceduresDetails.csv' DELIMITER ',' CSV HEADER;
+
+SELECT * FROM proceduredetails
+
+CREATE TABLE procedurehistory (
+    petid varchar,
+    proceduredate date,
+    proceduretype varchar,
+    proceduresubcode varchar
+);
+
+COPY procedurehistory FROM 'F:\Downloads\P9-ProceduresHistory.csv' DELIMITER ',' CSV HEADER;
+
+SELECT * FROM procedurehistory
+
+-- Challenges
+-- 1.
+SELECT o.name AS "Owner", p.name AS "Pet"
+FROM owners o 
+LEFT JOIN pets p ON o.ownerid = p.ownerid
+ORDER BY o.name
+
+SELECT o.name AS "Owner", p.name AS "Pet"
+FROM owners o 
+LEFT JOIN pets p ON o.ownerid = p.ownerid
+WHERE LEFT(o.name, 1) = LEFT(p.name, 1)
+
+SELECT o.name AS "Owner", p.name AS "Pet"
+FROM pets p 
+RIGHT JOIN owners o ON o.ownerid = p.ownerid
+ORDER BY o.name
+
+-- 2.
+SELECT p.name, ph.proceduretype, pd.description, pd.price
+FROM pets p 
+INNER JOIN procedurehistory ph ON p.petid = ph.petid
+INNER JOIN proceduredetails pd ON ph.proceduresubcode = pd.proceduresubcode
+
+-- 3.
+SELECT *
+FROM procedurehistory ph
+INNER JOIN proceduredetails pd ON ph.proceduresubcode = pd.proceduresubcode
+
+SELECT *
+FROM pets p
+FULL OUTER JOIN procedurehistory ph ON p.petid = ph.petid
+
+-- 4
+SELECT *
+FROM pets p 
+INNER JOIN procedurehistory ph ON p.petid = ph.petid
+LEFT JOIN proceduredetails pd ON ph.proceduresubcode = pd.proceduresubcode AND ph.proceduretype = pd.proceduretype
+
+-- 5
+SELECT o.name "owner", pd.proceduretype, pd.price
+FROM pets p 
+INNER JOIN owners o ON o.ownerid = p.ownerid
+INNER JOIN procedurehistory ph ON p.petid = ph.petid
+INNER JOIN proceduredetails pd ON ph.proceduresubcode = pd.proceduresubcode
+
+-- CROSS JOIN
+-- Is an implementation of a cartesian product
+
+SELECT *
+FROM pets 
+CROSS JOIN owners
+
+-- Chapter 7 - Creating tables
+
+CREATE DATABASE my_database;
+
+CREATE TABLE movies
+(
+	movie_name VARCHAR(200),
+	movie_year INTEGER, 
+	country VARCHAR(100),
+	genre VARCHAR NOT NULL,
+	PRIMARY KEY (movie_name, movie_year)
+);
+
+COPY movies FROM 'localurl.csv' DELIMITER ',' CSV HEADER
+
+INSERT INTO movies VALUES
+('SOME PLM 2', 1989, 'murica', 'Mistery'), 
+('PLM', 1989, 'murica', 'DRAMA');
+
+UPDATE movies
+SET country = 'USA'
+WHERE movie_name = 'SOME PLM 2' AND movie_year = 1989
+
+ALTER TABLE movies
+ALTER COLUMN country SET DEFAULT 'UK'
+
+INSERT INTO movies VALUES('stuff movie', 1990, '', 'Action')
+
+UPDATE movies
+SET country = DEFAULT
+WHERE movie_name = 'stuff movie'
+
+ALTER TABLE movies
+ADD COLUMN director VARCHAR(150)
+
+ALTER TABLE movies
+ADD / DELETE / ALTER
+
+UPDATE movies
+SET director = 'Christopher boy'
+WHERE movie_name = LOWER('STUFF MOVIE')
+
+DELETE FROM movies
+WHERE movie_name = 'SOME PLM 2'
+
+ALTER TABLE movies
+DROP director
+
+DROP CASCADE / DROP -- Everything that is relational to this table.
+
+SELECT *
+FROM movies
+
+DROP DATABASE my_database
+
+-- Chapter 8 - Database design
+
+CREATE TABLE transactions (
+    transactionid varchar,
+    timestampsec timestamp,
+    customerid varchar,
+    firstname varchar,
+    surname varchar,
+    shipping_state varchar,
+    item varchar,
+    description varchar,
+    retail_price float(2),
+    loyalty_discount float(2)
+);
+
+-- WINDOWS
+COPY transactions FROM 'C:\Users\Kirill\Desktop\Databases\OLTP.csv' DELIMITER ',' CSV HEADER;
+
+
+CREATE TABLE transactions (
+    transactionid varchar,
+    timestampsec timestamp,
+    customerid varchar,
+    firstname varchar,
+    surname varchar,
+    shipping_state varchar,
+    item varchar,
+    description varchar,
+    retail_price float(2),
+    loyalty_discount float(2)
+);
+
+-- WINDOWS
+COPY transactions FROM 'C:\Users\Kirill\Desktop\Databases\OLTP.csv' DELIMITER ',' CSV HEADER;
+
+SELECT *
+FROM transactions
+
+Normalization investigation:
+Step 1: Check if 1NF
+-- duplicat rows
+-- atomic cells
+
+SELECT COUNT(*)
+FROM transactions;
+-- 3455
+
+SELECT COUNT(*)
+FROM (
+	SELECT DISTINCT *
+	FROM transactions;
+) AS TMP
+-- 3455
+
+-- No duplicate rows.
+
+2NF
+-- Find CK (transactionid, timestampspec + customerid)
+-- Determine prime attributes and non prime attributes
+-- Determine columns that are dependent on CK(firstname,surname,shipping_state,loyalty_discount) do not fully depend on timestampspec + customerid CK
+
+-- CHECK 2NF
+SELECT *
+FROM TRANSACTIONS
+
+-- SEPARATE CUSTOMER-SPECIFIC COLUMNS
+CREATE TABLE TMP AS 
+SELECT CUSTOMERID, 
+	FIRSTNAME,
+	LASTNAME,
+	SHIPPING_STATE,
+	LOYALTY_DISCOUNT
+FROM TRANSACTIONS;
+
+-- 3455
+SELECT *
+FROM TMP;
+
+-- REMOVE DUPLICATES
+CREATE TABLE CUSTOMER AS
+SELECT DISTINCT *
+FROM TMP;
+-- 942
+
+SELECT *
+FROM CUSTOMER
+-- 2NF CONFIRMED
+
+-- REMOVE TRANSACTIONS CUSTOMER SPECIFIC COLUMNS
+-- LEAVING CUSTOMERID COLUMN
+ALTER TABLE TRANSACTIONS
+DROP COLUMN FIRSTNAME,
+DROP COLUMN SURNAME
+DROP COLUMN SHIPPING_STATE,
+DROP COLUMN LOYALTY_DISCOUNT
+
+SELECT *
+FROM TRANSACTIONS;
+-- 2NF CONFIRMED
+
+DROP TABLE TMP;
+
+-- CHECK 3NF
+SELECT *
+FROM CUSTOMERS;
+-- 3NF CONFIRMED
+
+SELECT *
+FROM TRANSACTIONS;
+
+-- TRANSITIVE DEPENDENCIES NEED TO BE SEPARATED INTO THEIR OWN TABLE
+CREATE TABLE TMP AS 
+SELECT ITEM,
+	DESCRIPTION,
+	RETAIL_PRICE
+FROM TRANSACTIONS;
+-- 3455
+
+SELECT *
+FROM TMP;
+
+-- TO MAKE THE NEW TABLE 1NF - REMOVE DUPLICATES
+CREATE TABLE ITEMS AS
+SELECT DISTINCT * 
+FROM TMP;
+-- 126
+
+-- CHECK
+SELECT *
+FROM ITEMS;
+-- 3NF CONFIRMED
+
+-- NOW REMOVE THE EXTRACTED ROWS FROM TRANSACTIONS TABLE;
+-- KEEP FK ITEM
+ALTER TRANSACTIONS
+DROP COLUMN DESCRIPTION,
+DROP COLUMN RETAIL_PRICE;
+
+SELECT *
+FROM TRANSACTIONS;
+-- 3NF CONFIRMED
+
+DROP TABLE TMP;
+
+
+
+
